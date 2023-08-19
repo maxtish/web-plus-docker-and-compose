@@ -1,4 +1,4 @@
-export const URL = "https://api.rdmax.students.nomoreparties.co";
+export const URL = "api.rdmax.students.nomoreparties.co";
 
 export const MINIMUM_PASSWORD_LENGTH = 3;
 export const MINIMUM_USERNAME_LENGTH = 3;

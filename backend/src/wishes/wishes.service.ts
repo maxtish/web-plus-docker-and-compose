@@ -1,25 +1,35 @@
-import { Injectable, NotAcceptableException } from '@nestjs/common';
-import { CreateWishDto } from './dto/create-wish.dto';
-import { UpdateWishDto } from './dto/update-wish.dto';
+import {
+  Injectable,
+  ConflictException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Wish } from './entities/wish.entity';
-import { FindManyOptions, FindOneOptions, Repository } from 'typeorm';
-import { NotFoundException } from '@nestjs/common';
+import { Repository, MoreThan, UpdateResult, In } from 'typeorm';
 import { User } from 'src/users/entities/user.entity';
+import { CreateWishDto } from './dto/CreateWishDto';
+import { UpdateWishDto } from './dto/UpdateWishDto';
 
 @Injectable()
 export class WishesService {
   constructor(
     @InjectRepository(Wish)
-    private wishRepository: Repository<Wish>,
+    private wishesRepository: Repository<Wish>,
   ) {}
 
-  create(createWishDto: CreateWishDto, owner) {
-    return this.wishRepository.insert({ ...createWishDto, owner });
+  findAll() {
+    return this.wishesRepository.find();
   }
 
-  last() {
-    return this.wishRepository.find({
+  async create(owner: User, createWishDto: CreateWishDto): Promise<Wish> {
+    return await this.wishesRepository.save({
+      ...createWishDto,
+      owner: owner,
+    });
+  }
+
+  async getLastWishes(): Promise<Wish[]> {
+    return await this.wishesRepository.find({
       order: {
         createdAt: 'DESC',
       },
@@ -27,88 +37,108 @@ export class WishesService {
     });
   }
 
-  top() {
-    return this.wishRepository.find({
+  async getTopWishes(): Promise<Wish[]> {
+    return await this.wishesRepository.find({
       order: {
         copied: 'DESC',
       },
-      take: 20,
-    });
-  }
-
-  findAll() {
-    return this.wishRepository.find();
-  }
-
-  findById(id: number) {
-    return this.wishRepository.findOne({
       where: {
-        id: id,
+        copied: MoreThan(0),
       },
-      relations: { owner: true, offers: {user: true} },
+      take: 10,
     });
   }
 
-  findOne(query: FindOneOptions<Wish>) {
-    return this.wishRepository.findOneOrFail(query);
-  }
-
-  async update(id: number, updateWishDto: UpdateWishDto, user: User) {
-    const wish = await this.findOne({
-      where: { id },
-      relations: { owner: true },
-    });
-    if (!wish) {
-      throw new NotFoundException('Не найден подарок');
-    }
-    if (wish.owner.id !== user.id) {
-      throw new NotAcceptableException(
-        'Этот подарок принадлежит другому пользователю',
-      );
-    }
-    return this.wishRepository.save({ ...wish, ...updateWishDto });
-  }
-
-  async remove(id: number, user: User) {
-    const wish = await this.findOne({
-      where: { id },
-      relations: { owner: true },
-    });
-    if (!wish) {
-      throw new NotFoundException('Не найден подарок');
-    }
-    if (wish.owner.id !== user.id) {
-      throw new NotAcceptableException(
-        'Этот подарок принадлежит другому пользователю',
-      );
-    }
-    this.wishRepository.delete(id);
-  }
-
-  save(wish: Wish) {
-    return this.wishRepository.save(wish);
-  }
-
-  async copy(id: number) {
-    const wish = await this.wishRepository.findOne({
-      where: {
-        id: id,
+  findWishesByUserId(userId: number): Promise<Wish[]> {
+    return this.wishesRepository.find({
+      where: { owner: { id: userId } },
+      relations: {
+        owner: {
+          wishes: true,
+          wishlists: true,
+        },
+        offers: {
+          user: true,
+          item: true,
+        },
       },
     });
+  }
 
-    if (!wish) {
-      throw new NotFoundException('Не найден копируемый подарок');
+  async findOne(wishId: number): Promise<Wish> {
+    return await this.wishesRepository.findOne({
+      where: {
+        id: wishId,
+      },
+      relations: {
+        owner: {
+          wishes: true,
+          wishlists: true,
+        },
+        offers: {
+          user: true,
+          item: true,
+        },
+      },
+    });
+  }
+
+  async updateOne(wishId: number, updatedWish: UpdateWishDto, userId: number) {
+    const wish = await this.findOne(wishId);
+
+    if (userId !== wish.owner.id) {
+      throw new ForbiddenException(
+        'Вы не можете изменить желание другого пользователя',
+      );
     }
-
-    return this.wishRepository.save({ ...wish, copied: wish.copied + 1 });
+    if (wish.raised > 0 && wish.price !== undefined) {
+      throw new ConflictException(
+        'Обновление запрещено, поскольку идёт сбор средств',
+      );
+    }
+    return await this.wishesRepository.update(wishId, updatedWish);
   }
 
-  async addToUserWishes(user: User, idWish: number) {
-    const wish = await this.findById(idWish);
-    this.create(wish, user);
+  async updateByRised(id: number, newRised: number): Promise<UpdateResult> {
+    return await this.wishesRepository.update({ id: id }, { raised: newRised });
   }
 
-  findMany(query: FindManyOptions<Wish>) {
-    return this.wishRepository.find(query);
+  async remove(wishId: number, userId: number) {
+    const wish = await this.findOne(wishId);
+    if (userId !== wish.owner.id) {
+      throw new ForbiddenException(
+        'Вы не можете удалить желание другого пользователя',
+      );
+    }
+    if (wish.raised > 0 && wish.price !== undefined) {
+      throw new ConflictException(
+        'Удаление запрещено, поскольку идёт сбор средств',
+      );
+    }
+    await this.wishesRepository.delete(wishId);
+    return wish;
+  }
+
+  findMany(items: number[]): Promise<Wish[]> {
+    return this.wishesRepository.findBy({ id: In(items) });
+  }
+
+  async copyWish(wishId: number, user: User) {
+    const wish = await this.findOne(wishId);
+    if (user.id === wish.owner.id) {
+      throw new ForbiddenException('Это желание уже есть в вашем списке');
+    }
+    await this.wishesRepository.update(wishId, {
+      copied: (wish.copied += 1),
+    });
+
+    const wishCopy = {
+      ...wish,
+      raised: 0,
+      owner: user.id,
+      offers: [],
+    };
+    await this.create(user, wishCopy);
+    return {};
   }
 }

@@ -1,89 +1,73 @@
 import {
   Injectable,
-  NotAcceptableException,
-  NotFoundException,
+  BadRequestException,
+  ConflictException,
 } from '@nestjs/common';
-import { CreateOfferDto } from './dto/create-offer.dto';
-import { UpdateOfferDto } from './dto/update-offer.dto';
+import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Offer } from './entities/offer.entity';
-import { FindManyOptions, Repository } from 'typeorm';
 import { User } from 'src/users/entities/user.entity';
+import { CreateOfferDto } from './dto/CreateOfferDto';
 import { WishesService } from 'src/wishes/wishes.service';
 
 @Injectable()
 export class OffersService {
   constructor(
     @InjectRepository(Offer)
-    private offerRepository: Repository<Offer>,
-    private wishService: WishesService,
+    private offersRepository: Repository<Offer>,
+    private wishesService: WishesService,
   ) {}
 
-  async create(createOfferDto: CreateOfferDto, user: User) {
-    const wish = await this.wishService.findOne({
-      where: { id: createOfferDto.itemId },
-      relations: { owner: true },
-    });
-    if (!wish) {
-      throw new NotFoundException('Не найден подарок');
-    }
-    if (wish.owner.id == user.id) {
-      throw new NotAcceptableException('Этот подарок принадлежит вам');
-    }
-    const wishOffers = await this.findMany({
-      where: { item: wish },
-      select: { amount: true },
-    });
-    const totalOffers = wishOffers.reduce((sum, el) => sum + el.amount, 0);
-    if (wish.price < totalOffers + createOfferDto.amount) {
-      throw new NotAcceptableException('Превышена сумма подарка');
-    }
-    wish.raised += createOfferDto.amount;
-    this.wishService.save(wish);
-    return this.offerRepository.insert({ ...createOfferDto, user, item: wish });
-  }
-
-  findMany(query: FindManyOptions<Offer>) {
-    return this.offerRepository.find(query);
-  }
-
-  findAll() {
-    return this.offerRepository.find();
-  }
-
-  findOne(id: number) {
-    return this.offerRepository.findOne({
-      where: {
-        id: id,
+  async findAll(): Promise<Offer[]> {
+    return this.offersRepository.find({
+      relations: {
+        item: true,
+        user: true,
       },
     });
   }
 
-  async update(id: number, updateOfferDto: UpdateOfferDto, user: User) {
-    const wish = await this.wishService.findOne({
-      where: { id: updateOfferDto.itemId },
-      relations: { owner: true },
+  findOne(id: number): Promise<Offer> {
+    return this.offersRepository.findOne({
+      relations: {
+        item: true,
+        user: true,
+      },
+      where: { id },
     });
-    if (!wish) {
-      throw new NotFoundException('Не найден подарок');
-    }
-    if (wish.owner.id !== user.id) {
-      throw new NotAcceptableException('Этот взнос принадлежит не вам');
-    }
-    return this.offerRepository.save(updateOfferDto);
   }
 
-  async remove(id: number, user: User) {
-    const wish = await this.wishService.findOne({
-      where: { id },
-      relations: { owner: true },
+  async create(user: User, createOfferDto: CreateOfferDto): Promise<Offer> {
+    const wishes = await this.wishesService.findOne(createOfferDto.itemId);
+    const { id } = user;
+    const moneyDifference = wishes.price - wishes.raised;
+    const wish = await this.wishesService.findOne(wishes.id);
+    const newRised = wish.raised + createOfferDto.amount;
+
+    if (createOfferDto.amount > moneyDifference) {
+      throw new BadRequestException(
+        'Сумма взноса превышает сумму остатка стоимости подарка',
+      );
+    }
+
+    await this.wishesService.updateByRised(wish.id, newRised);
+
+    if (wishes.raised > 0 && wishes.price !== undefined) {
+      throw new ConflictException(
+        'Обновление запрещено, поскольку идёт сбор средств',
+      );
+    }
+
+    if (id === wishes.owner.id) {
+      throw new BadRequestException(
+        'Вы не можете вносить деньги на свои подарки',
+      );
+    }
+
+    return this.offersRepository.save({
+      ...createOfferDto,
+      user,
+      item: wish,
     });
-    if (!wish) {
-      throw new NotFoundException('Не найден подарок');
-    }
-    if (wish.owner.id !== user.id) {
-      throw new NotAcceptableException('Этот взнос принадлежит не вам');
-    }
-    return this.offerRepository.delete(id);
   }
 }
