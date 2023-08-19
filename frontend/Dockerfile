@@ -1,16 +1,11 @@
-FROM node:18-alpine AS builder
+FROM node:16-alpine AS builder
 WORKDIR /app
-COPY package*.json .
-# Создается node_modules
+COPY package*.json ./
 RUN npm ci --no-audit --no-fund
-# Копируем локальную папку frontend в /app внутри контейнера
 COPY . .
-# Собрали /app/build
 RUN npm run build
 
-FROM nginx:alpine AS prod
-# Копируем только /app/build
+FROM nginx:latest AS prod
 COPY --from=builder /app/build /usr/share/nginx/html
-# Докидываем конфиг nginx
-COPY frontent.conf /etc/nginx/conf.d
+COPY nginx/conf.d/default.conf /etc/nginx/conf.d
 CMD ["nginx", "-g", "daemon off;"]

@@ -7,50 +7,116 @@ import {
   Param,
   Delete,
   UseGuards,
-  Req,
 } from '@nestjs/common';
-import { JwtGuard } from 'src/guards/jwt.guard';
 import { WishlistsService } from './wishlists.service';
+import { CreateWishlistDto } from './dto/create-wishlist.dto';
+import { UpdateWishlistDto } from './dto/update-wishlist.dto';
+import { AuthUser } from 'src/common/decorators/user.decorator';
+import { JwtAuthGuard } from 'src/auth/guard/jwt-auth.guard';
 import { WishesService } from 'src/wishes/wishes.service';
-import { UsersService } from 'src/users/users.service';
-import { CreateWishlistDto } from './dto/CreateWishlistDto';
-import { UpdateWishlistDto } from './dto/UpdateWishlistDto';
 
-@UseGuards(JwtGuard)
 @Controller('wishlistlists')
 export class WishlistsController {
   constructor(
-    private wishlistsService: WishlistsService,
-    private wishesService: WishesService,
-    private usersService: UsersService,
+    private readonly wishlistsService: WishlistsService,
+    private readonly wishService: WishesService,
   ) {}
+
+  @Post()
+  @UseGuards(JwtAuthGuard)
+  async create(@AuthUser() user, @Body() createWishlistDto: CreateWishlistDto) {
+    return this.wishlistsService.create(createWishlistDto, user);
+  }
 
   @Get()
   findAll() {
-    return this.wishlistsService.findMany();
+    return this.wishlistsService.findAll({
+      select: {
+        id: true,
+        createdAt: true,
+        updatedAt: true,
+        name: true,
+        image: true,
+        owner: {
+          id: true,
+          username: true,
+          about: true,
+          avatar: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+        items: {
+          id: true,
+          createdAt: true,
+          updatedAt: true,
+          name: true,
+          link: true,
+          image: true,
+          price: true,
+          raised: true,
+          copied: true,
+          description: true,
+        },
+      },
+      relations: {
+        owner: true,
+        items: true,
+      },
+    });
   }
 
   @Get(':id')
+  @UseGuards(JwtAuthGuard)
   findOne(@Param('id') id: number) {
-    return this.wishlistsService.findOne(+id);
+    return this.wishlistsService.findOne({
+      select: {
+        id: true,
+        createdAt: true,
+        updatedAt: true,
+        name: true,
+        image: true,
+        owner: {
+          id: true,
+          username: true,
+          about: true,
+          avatar: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+        items: {
+          id: true,
+          createdAt: true,
+          updatedAt: true,
+          name: true,
+          link: true,
+          image: true,
+          price: true,
+          raised: true,
+          copied: true,
+          description: true,
+        },
+      },
+      relations: {
+        owner: true,
+        items: true,
+      },
+      where: { id },
+    });
   }
 
   @Patch(':id')
-  async updateOne(
+  @UseGuards(JwtAuthGuard)
+  update(
+    @Param('id') id: number,
     @Body() updateWishlistDto: UpdateWishlistDto,
-    @Param('id') id: string,
-    @Req() req,
+    @AuthUser() user,
   ) {
-    return this.wishlistsService.updateOne(req.user.id, updateWishlistDto, +id);
-  }
-
-  @Post()
-  async create(@Req() req, @Body() createWishListDto: CreateWishlistDto) {
-    return this.wishlistsService.create(createWishListDto, req.user);
+    return this.wishlistsService.update(id, updateWishlistDto, user);
   }
 
   @Delete(':id')
-  async remove(@Req() req, @Param('id') id: number) {
-    return await this.wishlistsService.remove(id, req.user.id);
+  @UseGuards(JwtAuthGuard)
+  remove(@AuthUser() user, @Param('id') id: number) {
+    return this.wishlistsService.remove(id, user);
   }
 }

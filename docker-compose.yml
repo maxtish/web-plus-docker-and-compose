@@ -1,40 +1,42 @@
 version: '3'
+
 services:
+
   backend:
-    container_name: 'backend'
+    container_name: backend
     build:
       context: ./backend
       dockerfile: Dockerfile
-    #env_file: .env
+    env_file: ./.env
     restart: always
     ports:
       - 4000:3000
-    networks:
-      - backend
     depends_on:
-      - database
+      - db
+    networks:
+      - dbnet
+
+  db:
+    container_name: database
+    image: postgres:15-alpine
+    env_file: ./.env
+    restart: always
+    volumes:
+      - pgdata:/var/lib/postgres/data
+    networks:
+      - dbnet
 
   frontend:
-    container_name: 'frontend'
+    container_name: frontend
     build:
       context: ./frontend
       dockerfile: Dockerfile
+    restart: always
     ports:
       - 8081:80
 
-  database:
-    container_name: 'database'
-    image: postgres:12-alpine
-    networks:
-      - backend
-    env_file:
-      - .env
-    restart: always
-    volumes:
-      - ./pgdata:/var/lib/postgresql/data/pgdata
-
 volumes:
-  pg_data:
-    driver: local
+  pgdata:
+
 networks:
-  backend:
+  dbnet: {}
