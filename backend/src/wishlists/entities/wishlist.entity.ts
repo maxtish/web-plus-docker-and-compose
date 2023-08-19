@@ -4,7 +4,7 @@ import { User } from 'src/users/entities/user.entity';
 import { Wish } from 'src/wishes/entities/wish.entity';
 import { BaseEntity } from 'src/utils/base-entity';
 
-@Entity({ schema: 'kupipodariday' })
+@Entity()
 export class Wishlist extends BaseEntity {
   @Column()
   @Length(1, 250)

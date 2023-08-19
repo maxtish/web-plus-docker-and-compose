@@ -13,9 +13,9 @@ services:
     networks:
       - backend
     depends_on:
-      - database
+      - postgres
   
-  database:
+  postgres:
     container_name: database
     image: postgres:12-alpine
     networks:
