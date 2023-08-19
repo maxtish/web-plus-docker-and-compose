@@ -26,7 +26,7 @@ import { AuthModule } from './auth/auth.module';
       port: 5432,
       username: 'student',
       password: 'student',
-      database: 'nest_project',
+      database: 'pgdata',
       entities: [User, Wish, Wishlist, Offer],
       synchronize: true,
     }),

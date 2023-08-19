@@ -1,26 +1,25 @@
 version: '3'
+
 services:
   backend:
     container_name: 'backend'
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    #env_file: .env
-    restart: always
-    ports:
-      - 3001:3001
+    build: ./backend
     networks:
       - backend
+    env_file:
+      - .env
+    restart: always
+    ports:
+      - '4000:3000'
     depends_on:
       - database
 
   frontend:
     container_name: 'frontend'
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
+    build: ./frontend
+    restart: always
     ports:
-      - 3000:3000
+      - '8081:80'
 
   database:
     container_name: 'database'
@@ -29,12 +28,19 @@ services:
       - backend
     env_file:
       - .env
-    environment:
-      POSTGRES_PASSWORD: student
-      POSTGRES_DB: nest_project
     restart: always
     volumes:
       - ./pgdata:/var/lib/postgresql/data/pgdata
+
+  adminer:
+    image: adminer
+    restart: always
+    networks:
+      - backend
+    ports:
+      - 8080:8080
+    depends_on:
+      - database
 
 volumes:
   pg_data:
