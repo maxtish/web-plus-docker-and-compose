@@ -22,10 +22,10 @@ import { AuthModule } from './auth/auth.module';
     ConfigModule.forRoot({ envFilePath: '.env', isGlobal: true }),
     TypeOrmModule.forRoot({
       type: 'postgres',
-      host: 'localhost',
+      host: 'database',
       port: 5432,
       username: 'student',
-      password: '123',
+      password: 'student',
       database: 'nest_project',
       entities: [User, Wish, Wishlist, Offer],
       synchronize: true,

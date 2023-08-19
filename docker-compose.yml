@@ -29,6 +29,9 @@ services:
       - backend
     env_file:
       - .env
+    environment:
+      POSTGRES_PASSWORD: student
+      POSTGRES_DB: nest_project
     restart: always
     volumes:
       - ./pgdata:/var/lib/postgresql/data/pgdata
