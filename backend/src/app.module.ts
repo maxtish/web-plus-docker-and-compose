@@ -25,7 +25,7 @@ import { AuthModule } from './auth/auth.module';
       host: 'database',
       port: 5432,
       username: 'student',
-      password: 'student',
+      password: '123',
       database: 'pgdata',
       entities: [User, Wish, Wishlist, Offer],
       synchronize: true,
