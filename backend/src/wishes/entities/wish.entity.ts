@@ -4,7 +4,7 @@ import { Offer } from 'src/offers/entities/offer.entity';
 import { User } from 'src/users/entities/user.entity';
 import { BaseEntity } from 'src/utils/base-entity';
 
-@Entity({ schema: 'kupipodariday' })
+@Entity()
 export class Wish extends BaseEntity {
   @Column()
   @Length(1, 250)
