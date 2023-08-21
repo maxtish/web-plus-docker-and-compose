@@ -12,5 +12,5 @@ FROM nginx:alpine AS prod
 # Копируем только /app/build
 COPY --from=builder /app/build /usr/share/nginx/html
 # Докидываем конфиг nginx
-COPY frontend.conf /etc/nginx/conf.d
+COPY frontend.conf /etc/nginx/conf.d/default.conf
 CMD ["nginx", "-g", "daemon off;"]
