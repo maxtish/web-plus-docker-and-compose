@@ -52,9 +52,8 @@ export class UsersController {
   }
 
   @Get('me/wishes')
-  getWishesUser(@Req() req): Promise<Wish[]> {
-    const { id } = req.user;
-    return this.wishesService.findWishesByUserId(id);
+  async getWishesUser(@Req() req): Promise<Wish[]> {
+    return await this.wishesService.findWishesByUserId(req.user.id);
   }
 
   @Patch('me')
