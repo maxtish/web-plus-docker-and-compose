@@ -1,58 +1,41 @@
-import {
-  IsEmpty,
-  IsInt,
-  IsNotEmpty,
-  IsOptional,
-  IsUrl,
-  Length,
-} from 'class-validator';
-import { Column, Entity, JoinColumn, ManyToOne, OneToMany } from 'typeorm';
-
-import { baseEntity } from '../../utils/baseEntity';
-
-import { Offer } from '../../offers/entities/offer.entity';
-import { User } from '../../users/entities/user.entity';
+import { Entity, Column, OneToMany, ManyToOne } from 'typeorm';
+import { Length, IsUrl, IsNumber, IsInt } from 'class-validator';
+import { Offer } from 'src/offers/entities/offer.entity';
+import { User } from 'src/users/entities/user.entity';
+import { BaseEntity } from 'src/utils/base-entity';
 
 @Entity()
-export class Wish extends baseEntity {
+export class Wish extends BaseEntity {
   @Column()
-  @IsNotEmpty()
-  @Length(1, 250, { message: 'От 1 до 250 символов' })
+  @Length(1, 250)
   name: string;
 
-  @Column({ scale: 2 })
-  @IsNotEmpty()
-  price: number;
-
   @Column()
-  @IsNotEmpty()
-  @Length(1, 1024, { message: 'От 1 до 1024 символов' })
-  description: string;
-
-  @Column()
-  @IsNotEmpty()
-  @IsUrl()
   link: string;
 
   @Column()
-  @IsNotEmpty()
   @IsUrl()
   image: string;
 
-  @Column({ scale: 2, nullable: true })
-  @IsOptional()
+  @Column({ type: 'decimal', scale: 2 })
+  @IsNumber()
+  price: number;
+
+  @Column({ type: 'decimal', scale: 2, default: 0 })
+  @IsNumber()
   raised: number;
 
-  @OneToMany(() => Offer, (offer) => offer.item)
-  @IsEmpty()
-  offers: Offer[];
-
-  @ManyToOne(() => User, (user) => user.wishes)
-  @JoinColumn()
-  @IsNotEmpty()
+  @ManyToOne(() => User, (owner) => owner.wishes)
   owner: User;
 
-  @Column({ default: 0, nullable: true })
+  @Column()
+  @Length(1, 1024)
+  description: string;
+
+  @OneToMany(() => Offer, (offer) => offer.item)
+  offers: Offer[];
+
+  @Column({ default: 0 })
   @IsInt()
   copied: number;
 }

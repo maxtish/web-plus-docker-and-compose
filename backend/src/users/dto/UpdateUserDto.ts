@@ -4,28 +4,26 @@ import {
   IsOptional,
   IsUrl,
   Length,
-  MaxLength,
-  MinLength,
 } from 'class-validator';
 
-export class CreateUserDto {
-  @IsNotEmpty()
+export class UpdateUserDto {
+  @IsOptional()
   @Length(2, 30)
   username: string;
 
-  @IsEmail()
-  @IsNotEmpty()
-  email: string;
-
-  @IsNotEmpty()
-  @MinLength(6)
-  password: string;
-
   @IsOptional()
-  @MaxLength(200)
+  @Length(2, 200)
   about: string;
 
   @IsOptional()
   @IsUrl()
   avatar: string;
+
+  @IsOptional()
+  @IsEmail()
+  email: string;
+
+  @IsOptional()
+  @IsNotEmpty()
+  password: string;
 }

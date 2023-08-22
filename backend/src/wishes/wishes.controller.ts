@@ -1,83 +1,65 @@
 import {
-  Body,
   Controller,
-  Delete,
-  ForbiddenException,
   Get,
-  Param,
-  Patch,
   Post,
-  Req,
+  Body,
+  Patch,
+  Param,
+  Delete,
   UseGuards,
+  Req,
 } from '@nestjs/common';
-
-import { JwtGuard } from '../auth/guards/jwt.guard';
-import { Wish } from './entities/wish.entity';
+import { JwtGuard } from 'src/guards/jwt.guard';
 import { WishesService } from './wishes.service';
-
-import { UseInterceptors } from '@nestjs/common/decorators';
-import { ClassSerializerInterceptor } from '@nestjs/common/serializer';
-import { CreateWishDto } from './dto/create-wish.dto';
-import { UpdateWishDto } from './dto/update-wish.dto';
+import { CreateWishDto } from './dto/CreateWishDto';
+import { Wish } from './entities/wish.entity';
+import { UpdateWishDto } from './dto/UpdateWishDto';
 
 @Controller('wishes')
-@UseInterceptors(ClassSerializerInterceptor)
 export class WishesController {
-  constructor(private readonly wishesService: WishesService) {}
+  constructor(private wishesService: WishesService) {}
 
-  @UseGuards(JwtGuard)
-  @Post()
-  create(@Req() req, @Body() createWishDto: CreateWishDto): Promise<Wish> {
-    this.wishesService.create(req.user, createWishDto);
-    return;
+  @Get('top')
+  getTopWishes() {
+    return this.wishesService.getTopWishes();
   }
 
   @Get('last')
-  async findLastWishes(): Promise<Wish[]> {
-    return await this.wishesService.findLastWishes();
-  }
-
-  @Get('top')
-  async findTopWishes(): Promise<Wish[]> {
-    return await this.wishesService.findTopWishes();
+  getLastWishes() {
+    return this.wishesService.getLastWishes();
   }
 
   @UseGuards(JwtGuard)
   @Get(':id')
-  async findOne(@Param('id') id: number): Promise<Wish> {
-    return await this.wishesService.findOneById(id);
+  findOne(@Param('id') id: string) {
+    return this.wishesService.findOne(+id);
   }
 
   @UseGuards(JwtGuard)
   @Patch(':id')
-  async updateWish(
+  async updateOne(
     @Req() req,
-    @Param('id') id: number,
+    @Param('id') id: string,
     @Body() updateWishDto: UpdateWishDto,
   ) {
-    const wish = await this.wishesService.findOneById(id);
-
-    if (req.user.id !== wish.owner.id)
-      throw new ForbiddenException('Ошибка доступа');
-    await this.wishesService.update(id, updateWishDto);
-    return;
+    return await this.wishesService.updateOne(+id, updateWishDto, req.user.id);
   }
 
   @UseGuards(JwtGuard)
-  @Delete(':id')
-  async deleteWish(@Req() req, @Param('id') id: number): Promise<Wish> {
-    const wish = await this.wishesService.findOneById(id);
-
-    if (req.user.id !== wish.owner.id)
-      throw new ForbiddenException('Ошибка доступа');
-    await this.wishesService.remove(id);
-    return wish;
+  @Post()
+  create(@Req() req, @Body() createWishDto: CreateWishDto): Promise<Wish> {
+    return this.wishesService.create(req.user, createWishDto);
   }
 
   @UseGuards(JwtGuard)
   @Post(':id/copy')
-  async copyWish(@Param('id') id: number): Promise<Wish> {
-    await this.wishesService.copy(id);
-    return;
+  copyWish(@Param('id') id: number, @Req() req) {
+    return this.wishesService.copyWish(id, req.user);
+  }
+
+  @UseGuards(JwtGuard)
+  @Delete(':id')
+  async remove(@Req() req, @Param('id') id: number) {
+    return this.wishesService.remove(id, req.user.id);
   }
 }

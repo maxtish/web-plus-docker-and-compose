@@ -1,36 +1,26 @@
-import {
-  Body,
-  Controller,
-  Post,
-  Req,
-  UseGuards,
-  UseInterceptors,
-} from '@nestjs/common';
-
+import { Controller, Post, UseGuards, Req, Body } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { AuthService } from './auth.service';
+import { CreateUserDto } from 'src/users/dto/CreateUserDto';
+import { LocalGuard } from 'src/guards/local.guard';
 
-import { CreateUserDto } from '../users/dto/create-user.dto';
-import { TransformInterceptor } from '../utils/transform.interceptor';
-import { LocalGuard } from './guards/local.guard';
-
-@Controller('/')
+@Controller()
 export class AuthController {
   constructor(
-    private readonly authService: AuthService,
-    private readonly usersService: UsersService,
+    private usersService: UsersService,
+    private authService: AuthService,
   ) {}
 
   @UseGuards(LocalGuard)
   @Post('signin')
-  signin(@Req() req): { access_token: string } {
-    return this.authService.authorize(req.user);
+  signin(@Req() req) {
+    const user = req.user;
+    return this.authService.auth(user);
   }
 
-  @UseInterceptors(TransformInterceptor)
   @Post('signup')
   async signup(@Body() createUserDto: CreateUserDto) {
     const user = await this.usersService.create(createUserDto);
-    return this.authService.authorize(user);
+    return this.authService.auth(user);
   }
 }

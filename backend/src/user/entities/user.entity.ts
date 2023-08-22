@@ -26,11 +26,11 @@ export class User extends BaseEntity {
   @Column()
   password: string;
 
-  @OneToMany(() => Offer, (offer) => offer.user)
-  offers: Offer[];
-
   @OneToMany(() => Wish, (wish) => wish.owner)
   wishes: Wish[];
+
+  @OneToMany(() => Offer, (offer) => offer.user)
+  offers: Offer[];
 
   @OneToMany(() => Wishlist, (wishlist) => wishlist.owner)
   wishlists: Wishlist[];

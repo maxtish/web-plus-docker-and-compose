@@ -1,56 +1,96 @@
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-
-import { hash } from '../utils/functions';
-
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
-
+import { ForbiddenException, Injectable } from '@nestjs/common';
 import { User } from './entities/user.entity';
+import { Repository } from 'typeorm';
+import { PasswordHashService } from 'src/auth/password-hash/password-hash.service';
+import { InjectRepository } from '@nestjs/typeorm';
+import { CreateUserDto } from './dto/CreateUserDto';
+import { UpdateUserDto } from './dto/UpdateUserDto';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User)
-    private userRepository: Repository<User>,
+    private usersRepository: Repository<User>,
+    private passwordHashService: PasswordHashService,
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<User> {
-    const user = this.userRepository.create(createUserDto);
-    return await this.userRepository.save(user);
+    const username = await this.findUsername(createUserDto.username);
+    const email = await this.findEmail(createUserDto.email);
+    if (username !== null) {
+      throw new ForbiddenException(
+        'Пользователь с таким логином уже зарегистрирован',
+      );
+    }
+    if (email) {
+      throw new ForbiddenException(
+        'Пользователь с такой почтой уже зарегистрирован',
+      );
+    }
+    const user = this.usersRepository.create(createUserDto);
+    user.password = await this.passwordHashService.createHash(user.password);
+    return await this.usersRepository.save(user);
   }
 
-  async findOneById(id: number): Promise<User> {
-    return this.userRepository.findOneBy({ id });
-  }
-
-  async findOneByUsername(username: string): Promise<User> {
-    return this.userRepository.findOneBy({ username });
+  async findOne(id: number): Promise<User> {
+    return await this.usersRepository.findOneBy({ id });
   }
 
   async findAll(): Promise<User[]> {
-    return this.userRepository.find();
+    return this.usersRepository.find();
   }
 
-  async findMany(user): Promise<User[]> {
-    return await this.userRepository.find({
-      where: [{ email: user.query }, { username: user.query }],
+  async findMany(user: { query: any }): Promise<User[]> {
+    return await this.usersRepository.find({
+      where: [{ username: user.query }, { email: user.query }],
     });
   }
 
-  async update(id: number, user: UpdateUserDto) {
-    if (user.password) {
-      const newPassword = await hash(user.password, 10);
-      return this.userRepository.update(id, {
-        ...user,
-        password: newPassword,
-      });
+  async updateOne(id: number, updateUserDto: UpdateUserDto): Promise<User> {
+    if (updateUserDto.password) {
+      updateUserDto.password = await this.passwordHashService.createHash(
+        updateUserDto.password,
+      );
     }
-    return this.userRepository.update(id, user);
+    if (updateUserDto.username) {
+      const username = await this.findUsername(updateUserDto.username);
+      if (username !== null && username.id !== id) {
+        throw new ForbiddenException(
+          'Пользователь с таким логином уже зарегистрирован',
+        );
+      }
+    }
+    if (updateUserDto.email) {
+      const email = await this.findEmail(updateUserDto.email);
+      if (email !== null && email.id !== id) {
+        throw new ForbiddenException(
+          'Пользователь с такой почтой уже зарегистрирован',
+        );
+      }
+    }
+    await this.usersRepository.update({ id }, updateUserDto);
+    const updatedUser = await this.findOne(id);
+    delete updatedUser.password;
+    return updatedUser;
   }
 
-  async removeById(id: number) {
-    return this.userRepository.delete({ id });
+  async removeOne(id: number): Promise<void> {
+    await this.usersRepository.delete({ id });
+  }
+
+  async findEmail(email: string): Promise<User> {
+    return await this.usersRepository.findOne({
+      where: {
+        email: email,
+      },
+    });
+  }
+
+  async findUsername(username: string): Promise<User> {
+    return await this.usersRepository.findOne({
+      where: {
+        username: username,
+      },
+    });
   }
 }

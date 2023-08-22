@@ -1,26 +1,37 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+/* eslint-disable @typescript-eslint/no-unused-vars */
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-
-import { User } from '../users/entities/user.entity';
-import { UsersService } from '../users/users.service';
-
-import { compare } from '../utils/functions';
+import { PasswordHashService } from './password-hash/password-hash.service';
+import { User } from 'src/users/entities/user.entity';
+import { UsersService } from 'src/users/users.service';
 
 @Injectable()
 export class AuthService {
   constructor(
-    private readonly usersService: UsersService,
-    private readonly jwtService: JwtService,
+    private jwtService: JwtService,
+    private usersService: UsersService,
+    private passwordHashService: PasswordHashService,
   ) {}
 
-  authorize(user: User): { access_token: string } {
+  auth(user: User) {
     const payload = { sub: user.id };
     return { access_token: this.jwtService.sign(payload) };
   }
 
-  async validate(username: string, password: string) {
-    const user = await this.usersService.findOneByUsername(username);
-    if (!user) throw new NotFoundException('Неверные данные');
-    return await compare(password, user);
+  async validateUser(username: string, password: string) {
+    const user = await this.usersService.findUsername(username);
+    const validPassword = await this.passwordHashService.validPassword(
+      password,
+      user.password,
+    );
+    if (user) {
+      if (validPassword) {
+        const { password, ...result } = user;
+        return result;
+      } else {
+        throw new UnauthorizedException('Неверное имя пользователя или пароль');
+      }
+    }
+    return null;
   }
 }
