@@ -49,6 +49,22 @@ export class WishesService {
     });
   }
 
+  findWishesByUserId(userId: number): Promise<Wish[]> {
+    return this.wishesRepository.find({
+      where: { owner: { id: userId } },
+      relations: {
+        owner: {
+          wishes: true,
+          wishlists: true,
+        },
+        offers: {
+          user: true,
+          item: true,
+        },
+      },
+    });
+  }
+
   async findOne(wishId: number): Promise<Wish> {
     return await this.wishesRepository.findOne({
       where: {
@@ -124,43 +140,5 @@ export class WishesService {
     };
     await this.create(user, wishCopy);
     return {};
-  }
-
-  async getUserWishes(userId: number) {
-    const user = await this.wishesRepository.findOne({
-      where: { owner: { id: userId } },
-      relations: {
-        owner: { wishes: true },
-      },
-    });
-
-    return user.owner;
-  }
-
-  findWishesByUserId(userId: number): Promise<Wish[]> {
-    return this.wishesRepository.find({
-      where: { owner: { id: userId } },
-      relations: {
-        owner: {
-          wishes: true,
-          wishlists: true,
-        },
-        offers: {
-          user: true,
-          item: true,
-        },
-      },
-    });
-  }
-
-  async getAnotherUserWishes(username: string) {
-    const user = await this.wishesRepository.findOne({
-      where: { owner: { username } },
-      relations: {
-        owner: true,
-      },
-    });
-
-    return user.owner;
   }
 }
