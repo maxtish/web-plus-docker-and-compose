@@ -1,65 +1,71 @@
 import {
-  Controller,
-  Patch,
   Body,
+  ClassSerializerInterceptor,
+  Controller,
+  Get,
+  NotFoundException,
+  Param,
+  Patch,
   Post,
   Req,
-  Get,
   UseGuards,
-  Param,
-  NotFoundException,
+  UseInterceptors,
 } from '@nestjs/common';
-import { UsersService } from './users.service';
+
+import { JwtGuard } from '../auth/guards/jwt.guard';
+import { TransformInterceptor } from '../utils/transform.interceptor';
 import { Wish } from '../wishes/entities/wish.entity';
-import { JwtGuard } from 'src/guards/jwt.guard';
-import { WishesService } from 'src/wishes/wishes.service';
+import { WishesService } from '../wishes/wishes.service';
+import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from './entities/user.entity';
-import { UpdateUserDto } from './dto/UpdateUserDto';
+import { UsersService } from './users.service';
 
 @UseGuards(JwtGuard)
 @Controller('users')
+@UseInterceptors(ClassSerializerInterceptor)
 export class UsersController {
   constructor(
-    private usersService: UsersService,
-    private wishesService: WishesService,
+    private readonly wishesService: WishesService,
+    private readonly usersService: UsersService,
   ) {}
 
-  @Post('find')
-  public async findMany(@Body() user): Promise<User[]> {
-    return this.usersService.findMany(user);
+  @UseInterceptors(TransformInterceptor)
+  @Get('me')
+  async getMyUser(@Req() req): Promise<User> {
+    return this.usersService.findOneById(req.user.id);
   }
 
-  @Get('me')
-  getMe(@Req() req: any) {
-    return this.usersService.findOne(req.user.id);
+  @UseGuards(JwtGuard)
+  @Patch('me')
+  async updateMyUser(
+    @Req() req,
+    @Body() updateUserDto: UpdateUserDto,
+  ): Promise<User> {
+    await this.usersService.update(req.user.id, updateUserDto);
+    return this.usersService.findOneById(req.user.id);
+  }
+
+  @Get('me/wishes')
+  async getMyWishes(@Req() req): Promise<Wish[]> {
+    return this.wishesService.findManyByOwner(req.user.id);
   }
 
   @Get(':username')
-  async getUserByName(@Param('username') username: string) {
-    const user = await this.usersService.findUsername(username);
-    if (!user) {
-      throw new NotFoundException('Пользователь не найден');
-    }
-
+  async findOneById(@Param('username') username: string): Promise<User> {
+    const user = await this.usersService.findOneByUsername(username);
+    if (!user) throw new NotFoundException('Такой пользователь не найден');
     return user;
   }
 
   @Get(':username/wishes')
   async findWishesByUserName(@Param('username') username: string) {
-    const user = await this.usersService.findUsername(username);
-    const wish = await this.wishesService.findWishesByUserId(user.id);
-    return wish;
+    const user = await this.usersService.findOneByUsername(username);
+    return await this.wishesService.findManyByOwner(user.id);
   }
 
-  @Get('me/wishes')
-  getWishesUser(@Req() req): Promise<Wish[]> {
-    const { id } = req.user;
-    return this.wishesService.findWishesByUserId(id);
-  }
-
-  @Patch('me')
-  async updateMe(@Req() req, @Body() updateUser: UpdateUserDto) {
-    const { id } = req.user;
-    return this.usersService.updateOne(id, updateUser);
+  @UseInterceptors(TransformInterceptor)
+  @Post('find')
+  async findMany(@Body() user): Promise<User[]> {
+    return this.usersService.findMany(user);
   }
 }

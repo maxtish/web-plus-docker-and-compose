@@ -1,25 +1,31 @@
 import {
+  Body,
+  ClassSerializerInterceptor,
   Controller,
   Get,
-  Post,
-  Body,
+  NotFoundException,
   Param,
+  Post,
   Req,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+
+import { CreateOfferDto } from './dto/create-offer.dto';
 import { OffersService } from './offers.service';
-import { CreateOfferDto } from './dto/CreateOfferDto';
-import { JwtGuard } from 'src/guards/jwt.guard';
+
+import { JwtGuard } from '../auth/guards/jwt.guard';
+import { Offer } from './entities/offer.entity';
 
 @UseGuards(JwtGuard)
 @Controller('offers')
+@UseInterceptors(ClassSerializerInterceptor)
 export class OffersController {
   constructor(private readonly offersService: OffersService) {}
 
   @Post()
   async create(@Req() req, @Body() createOfferDto: CreateOfferDto) {
-    const user = req.user;
-    return this.offersService.create(user, createOfferDto);
+    return this.offersService.create(req.user, createOfferDto);
   }
 
   @Get()
@@ -28,7 +34,9 @@ export class OffersController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.offersService.findOne(+id);
+  async findOne(@Param('id') id: number): Promise<Offer> {
+    const offer = await this.offersService.findOneById(id);
+    if (!offer) throw new NotFoundException('Не найдено');
+    return offer;
   }
 }

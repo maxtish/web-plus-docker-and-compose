@@ -1,56 +1,71 @@
 import {
-  Controller,
-  Get,
-  Post,
   Body,
-  Patch,
-  Param,
+  ClassSerializerInterceptor,
+  Controller,
   Delete,
-  UseGuards,
+  Get,
+  NotFoundException,
+  Param,
+  Patch,
+  Post,
   Req,
+  UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
-import { JwtGuard } from 'src/guards/jwt.guard';
+
+import { JwtGuard } from '../auth/guards/jwt.guard';
+
+import { TransformInterceptor } from '../utils/transform.interceptor';
+
+import { CreateWishlistDto } from './dto/create-wishlist.dto';
+import { UpdateWishlistDto } from './dto/update-wishlist.dto';
+
+import { Wishlist } from './entities/wishlist.entity';
+
 import { WishlistsService } from './wishlists.service';
-import { WishesService } from 'src/wishes/wishes.service';
-import { UsersService } from 'src/users/users.service';
-import { CreateWishlistDto } from './dto/CreateWishlistDto';
-import { UpdateWishlistDto } from './dto/UpdateWishlistDto';
 
-@UseGuards(JwtGuard)
 @Controller('wishlistlists')
+@UseInterceptors(ClassSerializerInterceptor)
 export class WishlistsController {
-  constructor(
-    private wishlistsService: WishlistsService,
-    private wishesService: WishesService,
-    private usersService: UsersService,
-  ) {}
+  constructor(private readonly wishlistsService: WishlistsService) {}
 
+  @UseGuards(JwtGuard)
   @Get()
-  findAll() {
-    return this.wishlistsService.findMany();
+  async findAll(): Promise<Wishlist[]> {
+    return this.wishlistsService.findAll();
   }
 
+  @UseInterceptors(TransformInterceptor)
+  @UseGuards(JwtGuard)
+  @Post()
+  async create(@Req() req, @Body() createWishlistDto: CreateWishlistDto) {
+    return this.wishlistsService.create(req.user, createWishlistDto);
+  }
+
+  @UseGuards(JwtGuard)
   @Get(':id')
-  findOne(@Param('id') id: number) {
-    return this.wishlistsService.findOne(+id);
+  async findOne(@Param('id') id: number) {
+    const wishlist = await this.wishlistsService.findOneById(id);
+    if (!wishlist) throw new NotFoundException('Не найдено');
+    return wishlist;
   }
 
+  @UseGuards(JwtGuard)
   @Patch(':id')
-  async updateOne(
+  async update(
+    @Param('id') id: number,
     @Body() updateWishlistDto: UpdateWishlistDto,
-    @Param('id') id: string,
     @Req() req,
   ) {
-    return this.wishlistsService.updateOne(req.user.id, updateWishlistDto, +id);
+    await this.wishlistsService.update(req.user, id, updateWishlistDto);
+    return this.wishlistsService.findOneById(id);
   }
 
-  @Post()
-  async create(@Req() req, @Body() createWishListDto: CreateWishlistDto) {
-    return this.wishlistsService.create(createWishListDto, req.user);
-  }
-
+  @UseGuards(JwtGuard)
   @Delete(':id')
-  async remove(@Req() req, @Param('id') id: number) {
-    return await this.wishlistsService.remove(id, req.user.id);
+  async remove(@Param('id') id: number) {
+    const deletedWish = await this.wishlistsService.findOneById(id);
+    await this.wishlistsService.remove(id);
+    return deletedWish;
   }
 }
