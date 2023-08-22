@@ -48,7 +48,7 @@ export class UsersController {
   async findWishesByUserName(@Param('username') username: string) {
     const user = await this.usersService.findUsername(username);
     const wish = await this.wishesService.findWishesByUserId(user.id);
-    return wish;
+    return await wish;
   }
 
   @Get('me/wishes')
