@@ -8,13 +8,13 @@ import {
 } from 'class-validator';
 import { Column, Entity, JoinColumn, ManyToOne, OneToMany } from 'typeorm';
 
-import { BaseEntity } from '../../utils/base-entity';
+import { baseEntity } from '../../utils/baseEntity';
 
 import { Offer } from '../../offers/entities/offer.entity';
 import { User } from '../../users/entities/user.entity';
 
 @Entity()
-export class Wish extends BaseEntity {
+export class Wish extends baseEntity {
   @Column()
   @IsNotEmpty()
   @Length(1, 250, { message: 'От 1 до 250 символов' })

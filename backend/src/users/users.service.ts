@@ -1,96 +1,56 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
-import { User } from './entities/user.entity';
-import { Repository } from 'typeorm';
-import { PasswordHashService } from 'src/auth/password-hash/password-hash.service';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { CreateUserDto } from './dto/CreateUserDto';
-import { UpdateUserDto } from './dto/UpdateUserDto';
+import { Repository } from 'typeorm';
+
+import { hash } from '../utils/functions';
+
+import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
+
+import { User } from './entities/user.entity';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User)
-    private usersRepository: Repository<User>,
-    private passwordHashService: PasswordHashService,
+    private userRepository: Repository<User>,
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<User> {
-    const username = await this.findUsername(createUserDto.username);
-    const email = await this.findEmail(createUserDto.email);
-    if (username !== null) {
-      throw new ForbiddenException(
-        'Пользователь с таким логином уже зарегистрирован',
-      );
-    }
-    if (email) {
-      throw new ForbiddenException(
-        'Пользователь с такой почтой уже зарегистрирован',
-      );
-    }
-    const user = this.usersRepository.create(createUserDto);
-    user.password = await this.passwordHashService.createHash(user.password);
-    return await this.usersRepository.save(user);
+    const user = this.userRepository.create(createUserDto);
+    return await this.userRepository.save(user);
   }
 
-  async findOne(id: number): Promise<User> {
-    return await this.usersRepository.findOneBy({ id });
+  async findOneById(id: number): Promise<User> {
+    return this.userRepository.findOneBy({ id });
+  }
+
+  async findOneByUsername(username: string): Promise<User> {
+    return this.userRepository.findOneBy({ username });
   }
 
   async findAll(): Promise<User[]> {
-    return this.usersRepository.find();
+    return this.userRepository.find();
   }
 
-  async findMany(user: { query: any }): Promise<User[]> {
-    return await this.usersRepository.find({
-      where: [{ username: user.query }, { email: user.query }],
+  async findMany(user): Promise<User[]> {
+    return await this.userRepository.find({
+      where: [{ email: user.query }, { username: user.query }],
     });
   }
 
-  async updateOne(id: number, updateUserDto: UpdateUserDto): Promise<User> {
-    if (updateUserDto.password) {
-      updateUserDto.password = await this.passwordHashService.createHash(
-        updateUserDto.password,
-      );
+  async update(id: number, user: UpdateUserDto) {
+    if (user.password) {
+      const newPassword = await hash(user.password, 10);
+      return this.userRepository.update(id, {
+        ...user,
+        password: newPassword,
+      });
     }
-    if (updateUserDto.username) {
-      const username = await this.findUsername(updateUserDto.username);
-      if (username !== null && username.id !== id) {
-        throw new ForbiddenException(
-          'Пользователь с таким логином уже зарегистрирован',
-        );
-      }
-    }
-    if (updateUserDto.email) {
-      const email = await this.findEmail(updateUserDto.email);
-      if (email !== null && email.id !== id) {
-        throw new ForbiddenException(
-          'Пользователь с такой почтой уже зарегистрирован',
-        );
-      }
-    }
-    await this.usersRepository.update({ id }, updateUserDto);
-    const updatedUser = await this.findOne(id);
-    delete updatedUser.password;
-    return updatedUser;
+    return this.userRepository.update(id, user);
   }
 
-  async removeOne(id: number): Promise<void> {
-    await this.usersRepository.delete({ id });
-  }
-
-  async findEmail(email: string): Promise<User> {
-    return await this.usersRepository.findOne({
-      where: {
-        email: email,
-      },
-    });
-  }
-
-  async findUsername(username: string): Promise<User> {
-    return await this.usersRepository.findOne({
-      where: {
-        username: username,
-      },
-    });
+  async removeById(id: number) {
+    return this.userRepository.delete({ id });
   }
 }

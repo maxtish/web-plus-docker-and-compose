@@ -11,7 +11,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 
-import { JwtGuard } from '../guards/jwt.guard';
+import { JwtGuard } from '../auth/guards/jwt.guard';
 import { Wish } from './entities/wish.entity';
 import { WishesService } from './wishes.service';
 

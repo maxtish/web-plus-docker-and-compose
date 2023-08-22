@@ -1,23 +1,37 @@
-import { Entity, Column, ManyToMany, ManyToOne, JoinTable } from 'typeorm';
-import { Length, IsUrl, IsOptional } from 'class-validator';
-import { User } from 'src/users/entities/user.entity';
-import { Wish } from 'src/wishes/entities/wish.entity';
-import { BaseEntity } from 'src/utils/base-entity';
+import {
+  IsNotEmpty,
+  IsOptional,
+  IsUrl,
+  Length,
+  MaxLength,
+} from 'class-validator';
+import { Column, Entity, JoinTable, ManyToMany, ManyToOne } from 'typeorm';
+
+import { User } from '../../users/entities/user.entity';
+import { baseEntity } from '../../utils/baseEntity';
+import { Wish } from '../../wishes/entities/wish.entity';
 
 @Entity()
-export class Wishlist extends BaseEntity {
+export class Wishlist extends baseEntity {
   @Column()
-  @Length(1, 250)
+  @IsNotEmpty()
+  @Length(1, 250, { message: 'Может быть от 1 до 30 символов' })
   name: string;
 
-  @Column()
-  @IsUrl()
-  image: string;
+  @Column({ nullable: true })
+  @IsOptional()
+  @MaxLength(1500, { message: 'Максимум 1500 символов' })
+  description: string;
 
-  @ManyToMany(() => Wish, (wish) => wish.name)
+  @ManyToMany(() => Wish)
   @JoinTable()
   @IsOptional()
   items: Wish[];
+
+  @Column({ default: 'https://i.pravatar.cc/300' })
+  @IsOptional()
+  @IsUrl()
+  image: string;
 
   @ManyToOne(() => User, (user) => user.wishlists)
   owner: User;
