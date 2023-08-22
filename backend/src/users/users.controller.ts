@@ -16,6 +16,10 @@ import { WishesService } from 'src/wishes/wishes.service';
 import { User } from './entities/user.entity';
 import { UpdateUserDto } from './dto/UpdateUserDto';
 
+export interface RequestWithUser extends Request {
+  user: User;
+}
+
 @UseGuards(JwtGuard)
 @Controller('users')
 export class UsersController {
@@ -46,14 +50,12 @@ export class UsersController {
 
   @Get(':username/wishes')
   async findWishesByUserName(@Param('username') username: string) {
-    const user = await this.usersService.findUsername(username);
-
-    return await this.wishesService.findWishesByUserId(user.id);
+    return await this.usersService.getAnotherUserWishes(username);
   }
 
   @Get('me/wishes')
-  async getWishesUser(@Req() req): Promise<Wish[]> {
-    return await this.wishesService.findWishesByUserId(req.user.id);
+  async getWishesUser(@Req() req: RequestWithUser) {
+    return await this.usersService.getUserWishes(req.user.id);
   }
 
   @Patch('me')
