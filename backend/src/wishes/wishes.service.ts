@@ -2,6 +2,7 @@ import {
   Injectable,
   ConflictException,
   ForbiddenException,
+  NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Wish } from './entities/wish.entity';
@@ -65,22 +66,17 @@ export class WishesService {
     });
   }
 
-  async findOne(wishId: number): Promise<Wish> {
-    return await this.wishesRepository.findOne({
-      where: {
-        id: wishId,
-      },
+  async findOne(id: number) {
+    const wish = await this.wishesRepository.findOne({
       relations: {
-        owner: {
-          wishes: true,
-          wishlists: true,
-        },
-        offers: {
-          user: true,
-          item: true,
-        },
+        owner: { wishes: true, wishlists: true, offers: true },
+        offers: { user: true },
       },
+      where: { id },
     });
+
+    if (!wish) throw new NotFoundException('Подарок не найден');
+    return wish;
   }
 
   async updateOne(wishId: number, updatedWish: UpdateWishDto, userId: number) {
