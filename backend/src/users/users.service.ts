@@ -102,7 +102,7 @@ export class UsersService {
       },
     });
 
-    return user.wishes;
+    return user.wishlists;
   }
 
   async getUserWishes(userId: number) {
@@ -113,6 +113,6 @@ export class UsersService {
       },
     });
 
-    return user.wishes;
+    return user.wishlists;
   }
 }
