@@ -46,12 +46,15 @@ export class UsersController {
 
   @Get(':username/wishes')
   async findWishesByUserName(@Param('username') username: string) {
-    return this.usersService.getAnotherUserWishes(username);
+    const user = await this.usersService.findUsername(username);
+    const wish = await this.wishesService.findWishesByUserId(user.id);
+    return wish;
   }
 
   @Get('me/wishes')
-  getMyWishes(@Req() req) {
-    return this.usersService.getUserWishes(req.user.id);
+  getWishesUser(@Req() req): Promise<Wish[]> {
+    const { id } = req.user;
+    return this.wishesService.findWishesByUserId(id);
   }
 
   @Patch('me')

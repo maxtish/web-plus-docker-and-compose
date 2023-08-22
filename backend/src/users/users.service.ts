@@ -93,26 +93,4 @@ export class UsersService {
       },
     });
   }
-
-  async getAnotherUserWishes(username: string) {
-    const user = await this.usersRepository.findOne({
-      where: { username },
-      relations: {
-        wishes: true,
-      },
-    });
-
-    return user.wishlists;
-  }
-
-  async getUserWishes(userId: number) {
-    const user = await this.usersRepository.findOne({
-      where: { id: userId },
-      relations: {
-        wishes: { owner: true },
-      },
-    });
-
-    return user.wishlists;
-  }
 }
