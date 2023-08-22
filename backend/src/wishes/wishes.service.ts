@@ -152,4 +152,15 @@ export class WishesService {
       },
     });
   }
+
+  async getAnotherUserWishes(username: string) {
+    const user = await this.wishesRepository.findOne({
+      where: { owner: { username } },
+      relations: {
+        owner: true,
+      },
+    });
+
+    return user.owner;
+  }
 }

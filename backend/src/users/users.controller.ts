@@ -50,7 +50,7 @@ export class UsersController {
 
   @Get(':username/wishes')
   async findWishesByUserName(@Param('username') username: string) {
-    return await this.usersService.getAnotherUserWishes(username);
+    return await this.wishesService.getAnotherUserWishes(username);
   }
 
   @Get('me/wishes')
