@@ -1,41 +1,58 @@
-import { Entity, Column, OneToMany, ManyToOne } from 'typeorm';
-import { Length, IsUrl, IsNumber, IsInt } from 'class-validator';
-import { Offer } from 'src/offers/entities/offer.entity';
-import { User } from 'src/users/entities/user.entity';
-import { BaseEntity } from 'src/utils/base-entity';
+import {
+  IsEmpty,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsUrl,
+  Length,
+} from 'class-validator';
+import { Column, Entity, JoinColumn, ManyToOne, OneToMany } from 'typeorm';
+
+import { BaseEntity } from '../../utils/base-entity';
+
+import { Offer } from '../../offers/entities/offer.entity';
+import { User } from '../../users/entities/user.entity';
 
 @Entity()
 export class Wish extends BaseEntity {
   @Column()
-  @Length(1, 250)
+  @IsNotEmpty()
+  @Length(1, 250, { message: 'От 1 до 250 символов' })
   name: string;
 
+  @Column({ scale: 2 })
+  @IsNotEmpty()
+  price: number;
+
   @Column()
+  @IsNotEmpty()
+  @Length(1, 1024, { message: 'От 1 до 1024 символов' })
+  description: string;
+
+  @Column()
+  @IsNotEmpty()
+  @IsUrl()
   link: string;
 
   @Column()
+  @IsNotEmpty()
   @IsUrl()
   image: string;
 
-  @Column({ type: 'decimal', scale: 2 })
-  @IsNumber()
-  price: number;
-
-  @Column({ type: 'decimal', scale: 2, default: 0 })
-  @IsNumber()
+  @Column({ scale: 2, nullable: true })
+  @IsOptional()
   raised: number;
 
-  @ManyToOne(() => User, (owner) => owner.wishes)
-  owner: User;
-
-  @Column()
-  @Length(1, 1024)
-  description: string;
-
   @OneToMany(() => Offer, (offer) => offer.item)
+  @IsEmpty()
   offers: Offer[];
 
-  @Column({ default: 0 })
+  @ManyToOne(() => User, (user) => user.wishes)
+  @JoinColumn()
+  @IsNotEmpty()
+  owner: User;
+
+  @Column({ default: 0, nullable: true })
   @IsInt()
   copied: number;
 }
