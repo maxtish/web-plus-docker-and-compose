@@ -55,7 +55,7 @@ export class UsersController {
 
   @Get('me/wishes')
   async getWishesUser(@Req() req: RequestWithUser) {
-    return await this.usersService.getUserWishes(req.user.id);
+    return await this.wishesService.getUserWishes(req.user.id);
   }
 
   @Patch('me')

@@ -104,15 +104,4 @@ export class UsersService {
 
     return user.wishes;
   }
-
-  async getUserWishes(userId: number) {
-    const user = await this.usersRepository.findOne({
-      where: { id: userId },
-      relations: {
-        wishes: { owner: true },
-      },
-    });
-
-    return user.wishes;
-  }
 }
